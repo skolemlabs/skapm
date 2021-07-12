@@ -22,7 +22,8 @@ module Sender = struct
       Log.warn (fun m ->
           m "APM server response %d: %s"
             (Cohttp.Code.code_of_status response.status)
-            body)
+            body
+      )
 
   let sleep () = Lwt_unix.sleep 5.0
   let rec run_forever () =
@@ -49,7 +50,7 @@ let send messages =
   | Some _c -> List.iter Message_queue.push messages
 
 let with_transaction ?trace ~name ~type_ f =
-  let (trace, now) = Transaction.make_transaction ?trace ~name ~type_ () in
+  let (trace, _, now) = Transaction.make_transaction ?trace ~name ~type_ () in
   match f () with
   | x ->
     send [ Transaction (now ()) ];
@@ -60,7 +61,7 @@ let with_transaction ?trace ~name ~type_ f =
     raise exn
 
 let with_transaction_lwt ?trace ~name ~type_ f =
-  let (trace, now) = Transaction.make_transaction ?trace ~name ~type_ () in
+  let (trace, _, now) = Transaction.make_transaction ?trace ~name ~type_ () in
   let on_success x =
     send [ Transaction (now ()) ];
     Lwt.return x

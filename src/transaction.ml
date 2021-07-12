@@ -39,4 +39,4 @@ let make_transaction ?(trace : Trace.t option) ?request ~name ~type_ () =
       ~context ()
   in
   let new_trace = { Trace.trace_id; parent_id; transaction_id = Some id } in
-  (new_trace, finished)
+  (new_trace, id, finished)

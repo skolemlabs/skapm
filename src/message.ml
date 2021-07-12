@@ -2,12 +2,14 @@ type t =
   | Error of Error.t
   | Metadata of Metadata.t
   | Transaction of Transaction.t
+  | Span of Span.t
 
 let to_yojson (event : t) : Yojson.Safe.t =
   match event with
   | Error e -> `Assoc [ ("error", Error.to_yojson e) ]
   | Metadata m -> `Assoc [ ("metadata", Metadata.to_yojson m) ]
   | Transaction t -> `Assoc [ ("transaction", Transaction.to_yojson t) ]
+  | Span s -> `Assoc [ ("span", Span.to_yojson s) ]
 
 let to_string (event : t) = Yojson.Safe.to_string (to_yojson event)
 
