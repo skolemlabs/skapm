@@ -8,7 +8,7 @@ type context = {
 }
 [@@deriving to_yojson, make]
 
-type t = {
+type result = {
   id : string;
   name : string;
   timestamp : int;
@@ -21,6 +21,13 @@ type t = {
 }
 [@@deriving to_yojson, make]
 
+type t = {
+  finalize : ?response:Http.response -> unit -> result;
+  id : string;
+}
+
+let finalize t = t.finalize ()
+
 let make_transaction ?(trace : Trace.t option) ?request ~name ~type_ () =
   let id = Id.make () in
   let (parent_id, trace_id) =
@@ -30,13 +37,14 @@ let make_transaction ?(trace : Trace.t option) ?request ~name ~type_ () =
   in
   let timestamp = Timestamp.now_ms () in
   let now = Mtime_clock.counter () in
-  let finished ?response () =
+  let finalize ?response () =
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
     let span_count = no_span in
     let context = make_context ?request ?response () in
-    make ~id ~name ~timestamp ~trace_id ?parent_id ~duration ~type_ ~span_count
-      ~context ()
+    make_result ~id ~name ~timestamp ~trace_id ?parent_id ~duration ~type_
+      ~span_count ~context ()
   in
   let new_trace = { Trace.trace_id; parent_id; transaction_id = Some id } in
-  (new_trace, id, finished)
+  let t : t = { finalize; id } in
+  (new_trace, t)

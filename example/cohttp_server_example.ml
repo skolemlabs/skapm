@@ -4,7 +4,7 @@ open Cohttp_lwt_unix
 module Handlers = struct
   let root _ = Lwt.return (`OK, "Yay!", [])
 
-  let sleep req trace transaction_id =
+  let sleep req trace transaction =
     let length =
       req
       |> Request.uri
@@ -15,12 +15,13 @@ module Handlers = struct
     let sections = 4 in
     let list =
       List.init sections (fun i () ->
-          let finished =
-            Elastic_apm.Span.make_span ~trace ~parent_id:transaction_id
+          let span =
+            Elastic_apm.Span.make_span ~trace ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
-          Lwt_unix.sleep (length /. float sections) >|= fun () -> finished ()
+          Lwt_unix.sleep (length /. float sections) >|= fun () ->
+          Elastic_apm.Span.finalize span
       )
     in
     list |> Lwt_list.map_s (fun c -> c ()) >|= fun spans ->
@@ -33,19 +34,19 @@ let route req =
   let open Elastic_apm.Message in
   let path = req |> Request.uri |> Uri.path in
   let trace = Elastic_apm.Trace.of_headers (req |> Request.headers) in
-  let (_, id, finished) =
+  let (_, transaction) =
     Elastic_apm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
       ()
   in
   ( match path with
   | "/" -> Handlers.root req
-  | "/sleep" -> Handlers.sleep req trace id
+  | "/sleep" -> Handlers.sleep req trace transaction
   | _ -> Handlers.not_found req
   )
   >|= fun resp ->
   let (status, body, spans) = resp in
   let spans = spans |> List.map (fun span -> Span span) in
-  let transaction = finished () in
+  let transaction = Elastic_apm.Transaction.finalize transaction in
   let msgs = [ Transaction transaction ] @ spans in
   (status, body, msgs)
 
