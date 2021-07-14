@@ -1,3 +1,6 @@
+type context = { tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option }
+[@@deriving to_yojson, make]
+
 type result = {
   id : string;
   name : string;
@@ -8,6 +11,7 @@ type result = {
   type_ : string; [@key "type"]
   subtype : string;
   action : string;
+  context : context option;
 }
 [@@deriving to_yojson, make]
 
@@ -24,6 +28,7 @@ type parent =
   ]
 
 let make_span
+    ?(tags : Tag.t list option)
     ~(trace : Trace.t)
     ~(parent : parent)
     ~name
@@ -43,7 +48,8 @@ let make_span
   let finalize () =
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
+    let context = make_context ?tags () in
     make_result ~id ~name ~timestamp ~trace_id ~parent_id ~duration ~type_
-      ~subtype ~action
+      ~subtype ~action ~context ()
   in
   { finalize; id }

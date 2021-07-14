@@ -5,6 +5,7 @@ let no_span = { started = 0 }
 type context = {
   request : Http.request option;
   response : Http.response option;
+  tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
 }
 [@@deriving to_yojson, make]
 
@@ -28,7 +29,13 @@ type t = {
 
 let finalize t = t.finalize ()
 
-let make_transaction ?(trace : Trace.t option) ?request ~name ~type_ () =
+let make_transaction
+    ?(trace : Trace.t option)
+    ?(tags : Tag.t list option)
+    ?request
+    ~name
+    ~type_
+    () =
   let id = Id.make () in
   let (parent_id, trace_id) =
     match trace with
@@ -41,7 +48,7 @@ let make_transaction ?(trace : Trace.t option) ?request ~name ~type_ () =
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
     let span_count = no_span in
-    let context = make_context ?request ?response () in
+    let context = make_context ?request ?response ?tags () in
     make_result ~id ~name ~timestamp ~trace_id ?parent_id ~duration ~type_
       ~span_count ~context ()
   in
