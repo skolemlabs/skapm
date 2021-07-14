@@ -15,8 +15,10 @@ module Handlers = struct
     let sections = 4 in
     let list =
       List.init sections (fun i () ->
+          let tags = [ ("index", `Int i) ] in
           let span =
-            Elastic_apm.Span.make_span ~trace ~parent:(`Transaction transaction)
+            Elastic_apm.Span.make_span ~tags ~trace
+              ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
@@ -34,9 +36,10 @@ let route req =
   let open Elastic_apm.Message in
   let path = req |> Request.uri |> Uri.path in
   let trace = Elastic_apm.Trace.of_headers (req |> Request.headers) in
+  let tags = [ ("path", `String path) ] in
   let (_, transaction) =
-    Elastic_apm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
-      ()
+    Elastic_apm.Transaction.make_transaction ~tags ~trace ~name:path
+      ~type_:"request" ()
   in
   ( match path with
   | "/" -> Handlers.root req
