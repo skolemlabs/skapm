@@ -15,12 +15,19 @@ type result = {
 }
 [@@deriving to_yojson, make]
 
+let to_message_yojson result = `Assoc [ ("span", result_to_yojson result) ]
+
 type t = {
   finalize : unit -> result;
   id : string;
 }
 
 let finalize t = t.finalize ()
+
+let finalize_and_send t =
+  let result = t.finalize () in
+  Message_queue.push (to_message_yojson result);
+  result
 
 type parent =
   [ `Span of t
@@ -40,7 +47,9 @@ let make_span
   let parent_id =
     match parent with
     | `Span s -> s.id
-    | `Transaction t -> t.id
+    | `Transaction t ->
+      let () = t.incr_spans () in
+      t.id
   in
   let trace_id = trace.trace_id in
   let timestamp = Timestamp.now_ms () in

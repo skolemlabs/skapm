@@ -22,12 +22,21 @@ type result = {
 }
 [@@deriving to_yojson, make]
 
+let to_message_yojson result =
+  `Assoc [ ("transaction", result_to_yojson result) ]
+
 type t = {
   finalize : ?response:Http.response -> unit -> result;
+  incr_spans : unit -> unit;
   id : string;
 }
 
 let finalize t = t.finalize ()
+
+let finalize_and_send t =
+  let result = t.finalize () in
+  Message_queue.push (to_message_yojson result);
+  result
 
 let make_transaction
     ?(trace : Trace.t option)
@@ -44,14 +53,16 @@ let make_transaction
   in
   let timestamp = Timestamp.now_ms () in
   let now = Mtime_clock.counter () in
+  let num_spans = ref 0 in
+  let incr_spans () = incr num_spans in
   let finalize ?response () =
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
-    let span_count = no_span in
+    let span_count : span_count = { started = !num_spans } in
     let context = make_context ?request ?response ?tags () in
     make_result ~id ~name ~timestamp ~trace_id ?parent_id ~duration ~type_
       ~span_count ~context ()
   in
   let new_trace = { Trace.trace_id; parent_id; transaction_id = Some id } in
-  let t : t = { finalize; id } in
+  let t : t = { finalize; id; incr_spans } in
   (new_trace, t)
