@@ -1,4 +1,4 @@
-let q : Message.t Queue.t = Queue.create ()
+let q : Yojson.Safe.t Queue.t = Queue.create ()
 let max_length = ref 1000
 
 let rec make_room () =
