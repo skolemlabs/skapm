@@ -42,7 +42,7 @@ let get_cpu_usage file =
             in
             Printf.printf "%Lu %Lu %Lu %Lu\n" prev_idle_time prev_total_time
               delta_idle_time prev_total_time;
-            Some ((1.0 -. inverse) *. 100.)
+            Some ((1.0 -. inverse))
           | _ -> None
         in
         prev_idle_time := Some !idle_time;
