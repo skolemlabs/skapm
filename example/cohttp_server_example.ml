@@ -69,5 +69,5 @@ let () =
   let context =
     Elastic_apm.Context.make ~secret_token ~service_name ~apm_server:url ()
   in
-  Elastic_apm.Apm.init context;
+  Elastic_apm.Apm.init ~enable_system_metrics:true context;
   Lwt_main.run server |> ignore
