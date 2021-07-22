@@ -40,9 +40,7 @@ let get_cpu_usage file =
             let inverse =
               Int64.to_float delta_idle_time /. Int64.to_float delta_total_time
             in
-            Printf.printf "%Lu %Lu %Lu %Lu\n" prev_idle_time prev_total_time
-              delta_idle_time prev_total_time;
-            Some ((1.0 -. inverse))
+            Some (1.0 -. inverse)
           | _ -> None
         in
         prev_idle_time := Some !idle_time;

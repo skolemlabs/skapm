@@ -37,7 +37,6 @@ module Sender = struct
     let uri = Uri.with_path context.apm_server "/intake/v2/events" in
     let headers = Cohttp.Header.of_list (make_headers context) in
     let body_str = make_body context events in
-    print_endline body_str;
     let body = Cohttp_lwt.Body.of_string body_str in
     let* (response, response_body) =
       Cohttp_lwt_unix.Client.post ~headers ~body uri
@@ -65,6 +64,12 @@ module Sender = struct
       match !global_sender with
       | None -> sleep ()
       | Some { max_message_batch_size; context; send } ->
+        let max_message_batch_size =
+          if !enable_system_metrics then
+            max_message_batch_size - 1
+          else
+            max_message_batch_size
+        in
         ( match Message_queue.pop_n ~max:max_message_batch_size with
         | [] ->
           ( if !enable_system_metrics then
