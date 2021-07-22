@@ -13,6 +13,8 @@ module Sender = struct
 
   let global_sender : t option ref = ref None
 
+  let enable_system_metrics : bool ref = ref false
+
   let make_headers (context : Context.t) =
     let headers = [ ("content-type", "application/x-ndjson") ] in
     match context with
@@ -35,6 +37,7 @@ module Sender = struct
     let uri = Uri.with_path context.apm_server "/intake/v2/events" in
     let headers = Cohttp.Header.of_list (make_headers context) in
     let body_str = make_body context events in
+    print_endline body_str;
     let body = Cohttp_lwt.Body.of_string body_str in
     let* (response, response_body) =
       Cohttp_lwt_unix.Client.post ~headers ~body uri
@@ -57,20 +60,35 @@ module Sender = struct
   let sleep () = Lwt_unix.sleep 5.0
   let rec run_forever () =
     let ( let* ) = Lwt.bind in
+    let open Lwt in
     let* () =
       match !global_sender with
       | None -> sleep ()
       | Some { max_message_batch_size; context; send } ->
         ( match Message_queue.pop_n ~max:max_message_batch_size with
-        | [] -> sleep ()
-        | messages -> send context messages
+        | [] ->
+          ( if !enable_system_metrics then
+            Metric.system () >>= fun systemMetrics ->
+            send context [ systemMetrics |> Metric.to_message_yojson ]
+          else
+            Lwt.return_unit
+          )
+          >>= sleep
+        | messages ->
+          Metric.system () >>= fun systemMetrics ->
+          send context (messages @ [ systemMetrics |> Metric.to_message_yojson ])
         )
     in
     run_forever ()
 end
 
-let init ?(max_message_batch_size = 50) ?(send = Sender.send) context =
+let init
+    ?(max_message_batch_size = 50)
+    ?(send = Sender.send)
+    ?(enable_system_metrics = false)
+    context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
+  Sender.enable_system_metrics := enable_system_metrics;
   Lwt.async Sender.run_forever
 
 let send messages =
