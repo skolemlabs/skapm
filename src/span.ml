@@ -61,3 +61,15 @@ let make_span
       ~subtype ~action ~context ()
   in
   { finalize; id; trace_id }
+
+let wrap
+  ~name
+  ~type_
+  ~subtype
+  ~action
+  (f: (unit -> 'a))
+  (parent: parent) = 
+  let span = make_span ~name ~type_ ~subtype ~action ~parent () in
+  let v = f () in
+  let _: result = finalize_and_send span in
+  v
