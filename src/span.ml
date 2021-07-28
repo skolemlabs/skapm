@@ -62,14 +62,8 @@ let make_span
   in
   { finalize; id; trace_id }
 
-let wrap
-  ~name
-  ~type_
-  ~subtype
-  ~action
-  (f: (unit -> 'a))
-  (parent: parent) = 
+let wrap_call ~name ~type_ ~subtype ~action ~parent (f : unit -> 'a) =
   let span = make_span ~name ~type_ ~subtype ~action ~parent () in
   let v = f () in
-  let _: result = finalize_and_send span in
+  let (_ : result) = finalize_and_send span in
   v
