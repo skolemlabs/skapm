@@ -29,6 +29,7 @@ type t = {
   finalize : ?response:Http.response -> unit -> result;
   incr_spans : unit -> unit;
   id : string;
+  trace_id : string;
 }
 
 let finalize t = t.finalize ()
@@ -64,5 +65,5 @@ let make_transaction
       ~span_count ~context ()
   in
   let new_trace = { Trace.trace_id; parent_id; transaction_id = Some id } in
-  let t : t = { finalize; id; incr_spans } in
+  let t : t = { finalize; id; incr_spans; trace_id } in
   (new_trace, t)

@@ -4,7 +4,7 @@ open Cohttp_lwt_unix
 module Handlers = struct
   let root _ = Lwt.return (`OK, "Yay!")
 
-  let sleep req trace transaction =
+  let sleep req transaction =
     let length =
       req
       |> Request.uri
@@ -17,8 +17,7 @@ module Handlers = struct
       List.init sections (fun i () ->
           let tags = [ ("index", `Int i) ] in
           let span =
-            Elastic_apm.Span.make_span ~tags ~trace
-              ~parent:(`Transaction transaction)
+            Elastic_apm.Span.make_span ~tags ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
@@ -38,13 +37,13 @@ end
 let route req =
   let path = req |> Request.uri |> Uri.path in
   let trace = Elastic_apm.Trace.of_headers (req |> Request.headers) in
-  let (trace, transaction) =
+  let (_, transaction) =
     Elastic_apm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
       ()
   in
   ( match path with
   | "/" -> Handlers.root req
-  | "/sleep" -> Handlers.sleep req trace transaction
+  | "/sleep" -> Handlers.sleep req transaction
   | _ -> Handlers.not_found req
   )
   >|= fun resp ->

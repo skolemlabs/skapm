@@ -20,6 +20,7 @@ let to_message_yojson result = `Assoc [ ("span", result_to_yojson result) ]
 type t = {
   finalize : unit -> result;
   id : string;
+  trace_id : string;
 }
 
 let finalize t = t.finalize ()
@@ -36,7 +37,6 @@ type parent =
 
 let make_span
     ?(tags : Tag.t list option)
-    ~(trace : Trace.t)
     ~(parent : parent)
     ~name
     ~type_
@@ -44,14 +44,13 @@ let make_span
     ~action
     () =
   let id = Id.make () in
-  let parent_id =
+  let (parent_id, trace_id) =
     match parent with
-    | `Span s -> s.id
+    | `Span s -> (s.id, s.trace_id)
     | `Transaction t ->
       let () = t.incr_spans () in
-      t.id
+      (t.id, t.trace_id)
   in
-  let trace_id = trace.trace_id in
   let timestamp = Timestamp.now_ms () in
   let now = Mtime_clock.counter () in
   let finalize () =
@@ -61,4 +60,4 @@ let make_span
     make_result ~id ~name ~timestamp ~trace_id ~parent_id ~duration ~type_
       ~subtype ~action ~context ()
   in
-  { finalize; id }
+  { finalize; id; trace_id }
