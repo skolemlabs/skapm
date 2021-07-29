@@ -15,9 +15,12 @@ module Handlers = struct
     let sections = 4 in
     let list =
       List.init sections (fun i () ->
-          let tags = [ ("index", `Int i) ] in
+          let context =
+            Elastic_apm.Span.Context.make ~tags:[ ("index", `Int i) ] ()
+          in
           let span =
-            Elastic_apm.Span.make_span ~tags ~parent:(`Transaction transaction)
+            Elastic_apm.Span.make_span ~context
+              ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in

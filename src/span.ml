@@ -1,5 +1,22 @@
-type context = { tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option }
-[@@deriving to_yojson, make]
+module Context = struct
+  type db = {
+    instance : string option;
+    link : string option;
+    rows_affected : int option;
+    statement : string option;
+    type_ : string option; [@key "type"]
+    user : string option;
+  }
+  [@@deriving to_yojson, make]
+
+  type t = {
+    tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
+    db : db option;
+  }
+  [@@deriving to_yojson, make]
+
+  let empty = { tags = None; db = None }
+end
 
 type result = {
   id : string;
@@ -11,7 +28,7 @@ type result = {
   type_ : string; [@key "type"]
   subtype : string;
   action : string;
-  context : context option;
+  context : Context.t option;
 }
 [@@deriving to_yojson, make]
 
@@ -36,7 +53,7 @@ type parent =
   ]
 
 let make_span
-    ?(tags : Tag.t list option)
+    ?(context = Context.empty)
     ~(parent : parent)
     ~name
     ~type_
@@ -56,7 +73,6 @@ let make_span
   let finalize () =
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
-    let context = make_context ?tags () in
     make_result ~id ~name ~timestamp ~trace_id ~parent_id ~duration ~type_
       ~subtype ~action ~context ()
   in
