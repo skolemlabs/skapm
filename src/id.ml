@@ -1,5 +1,7 @@
+let rand_state = Random.State.make_self_init ()
+
 let make_uuid =
-  let gen = Uuidm.v4_gen (Random.get_state ()) in
+  let gen = Uuidm.v4_gen rand_state in
   (* NOTE: Yes, the `fun () -> gen ()` is redundant. It also makes the intent
      clear to readers. *)
   fun () -> gen ()

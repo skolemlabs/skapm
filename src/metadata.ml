@@ -68,6 +68,8 @@ type t = {
 }
 [@@deriving to_yojson, make]
 
+let to_message_yojson t = `Assoc [ ("metadata", to_yojson t) ]
+
 let make ~name =
   let service = make_service name in
   make ~process:current_process ~system:current_system ~service

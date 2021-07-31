@@ -47,6 +47,8 @@ type t = {
 }
 [@@deriving to_yojson, make]
 
+let to_message_yojson t = `Assoc [ ("error", to_yojson t) ]
+
 let make ?(trace : Trace.t option) st (exn : exn) : t =
   let id = Id.make () in
   let timestamp = Timestamp.now_ms () in
