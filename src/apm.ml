@@ -57,6 +57,7 @@ module Sender = struct
       )
 
   let sleep () = Lwt_unix.sleep 5.0
+
   let rec run_forever () =
     let ( let* ) = Lwt.bind in
     let open Lwt in
@@ -64,25 +65,23 @@ module Sender = struct
       match !global_sender with
       | None -> sleep ()
       | Some { max_message_batch_size; context; send } ->
-        let max_message_batch_size =
+        let (send, max_message_batch_size) =
           if !enable_system_metrics then
-            max_message_batch_size - 1
+            ( (fun messages ->
+                let* system_metrics = Metric.system () in
+                match system_metrics with
+                | Some metrics ->
+                  send context
+                    ((metrics |> Metric.to_message_yojson) :: messages)
+                | None -> send context messages
+                ),
+              max_message_batch_size - 1
+            )
           else
-            max_message_batch_size
+            (send context, max_message_batch_size)
         in
-        ( match Message_queue.pop_n ~max:max_message_batch_size with
-        | [] ->
-          ( if !enable_system_metrics then
-            Metric.system () >>= fun systemMetrics ->
-            send context [ systemMetrics |> Metric.to_message_yojson ]
-          else
-            Lwt.return_unit
-          )
-          >>= sleep
-        | messages ->
-          Metric.system () >>= fun systemMetrics ->
-          send context (messages @ [ systemMetrics |> Metric.to_message_yojson ])
-        )
+        let messages = Message_queue.pop_n ~max:max_message_batch_size in
+        send messages >>= sleep
     in
     run_forever ()
 end
