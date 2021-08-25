@@ -32,7 +32,7 @@ let get_cpu_usage file =
             total_time := t1 ++ t2 ++ t3 ++ t4;
             idle_time := t4
         );
-        let cpuUsage =
+        let cpu_usage =
           match (!prev_idle_time, !prev_total_time) with
           | (Some prev_idle_time, Some prev_total_time) ->
             let delta_idle_time = !idle_time -- prev_idle_time in
@@ -45,7 +45,7 @@ let get_cpu_usage file =
         in
         prev_idle_time := Some !idle_time;
         prev_total_time := Some !total_time;
-        cpuUsage
+        cpu_usage
         )
   |> Lwt_result.catch
 
@@ -93,4 +93,8 @@ let system () =
     | Ok (Some cpu_usage) -> [ ("system.cpu.total.norm.pct", `Float cpu_usage) ]
     | _ -> []
   in
-  Lwt.return { samples = ram_samples @ cpu_samples; timestamp }
+  Lwt.return
+    ( match ram_samples @ cpu_samples with
+    | [] -> None
+    | samples -> Some { samples; timestamp }
+    )
