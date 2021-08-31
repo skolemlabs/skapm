@@ -77,16 +77,3 @@ let make_span
       ~subtype ~action ~context ()
   in
   { finalize; id; trace_id }
-
-let wrap_call
-    ?(context = Context.empty)
-    ~name
-    ~type_
-    ~subtype
-    ~action
-    ~parent
-    (f : unit -> 'a) =
-  let span = make_span ~name ~type_ ~subtype ~action ~parent ~context () in
-  let v = f () in
-  let (_ : result) = finalize_and_send span in
-  v

@@ -47,17 +47,24 @@ type t = {
 }
 [@@deriving to_yojson, make]
 
+type parent =
+  [ `Span of Span.t
+  | `Transaction of Transaction.t
+  | `Trace of Trace.t
+  ]
+
 let to_message_yojson t = `Assoc [ ("error", to_yojson t) ]
 
-let make ?(trace : Trace.t option) st (exn : exn) : t =
+let make ?(parent : parent option) st (exn : exn) : t =
   let id = Id.make () in
   let timestamp = Timestamp.now_ms () in
-  let (trace_id, transaction_id, parent_id) =
-    match trace with
-    | Some { trace_id; transaction_id = Some id; parent_id = None } ->
-      (Some trace_id, Some id, Some id)
-    | Some t -> (Some t.trace_id, t.transaction_id, t.parent_id)
-    | None -> (None, None, None)
+  let (parent_id, trace_id) =
+    match parent with
+    | Some (`Span span) -> (Some span.id, Some span.trace_id)
+    | Some (`Transaction transaction) ->
+      (Some transaction.id, Some transaction.trace_id)
+    | Some (`Trace trace) -> (None, Some trace.trace_id)
+    | None -> (None, None)
   in
   let exception_ = Exception.make st exn in
-  make ~id ~timestamp ?trace_id ?transaction_id ?parent_id ~exception_ ()
+  make ~id ~timestamp ?trace_id ?parent_id ~exception_ ()
