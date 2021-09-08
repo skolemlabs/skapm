@@ -1,9 +1,3 @@
-let log_src = Logs.Src.create "apm"
-module Log = (val Logs_lwt.src_log (Logs.Src.create "apm"))
-
-(* Default to no APM-specific logging *)
-let () = Logs.Src.set_level log_src None
-
 module Sender = struct
   type t = {
     max_message_batch_size : int;
@@ -90,9 +84,11 @@ let init
     ?(max_message_batch_size = 50)
     ?(send = Sender.send)
     ?(enable_system_metrics = false)
+    ?(log_level : Logs.level option)
     context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
   Sender.enable_system_metrics := enable_system_metrics;
+  Log.set_level log_level;
   Lwt.async Sender.run_forever
 
 let send messages =
