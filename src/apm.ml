@@ -75,7 +75,19 @@ module Sender = struct
             (send context, max_message_batch_size)
         in
         let messages = Message_queue.pop_n ~max:max_message_batch_size in
-        send messages >>= sleep
+        ( match messages with
+        | [] -> Lwt.return_unit
+        | _ ->
+          let* () =
+            Log.debug (fun m ->
+                m "Sending messages: %a"
+                  (Fmt.list Yojson.Safe.pretty_print)
+                  messages
+            )
+          in
+          send messages
+        )
+        >>= sleep
     in
     run_forever ()
 end
