@@ -1,6 +1,14 @@
 open Lwt
 
-type sample = string * [ `Float of float | `Int of int | `Intlit of string ]
+type yojson_num =
+  [ `Float of float
+  | `Int of int
+  | `Intlit of string
+  ]
+
+type sample = string * yojson_num
+
+type tag = string * [ `String of string | `Bool of bool | yojson_num ]
 
 let sample_list_to_yojson samples =
   `Assoc
@@ -10,8 +18,12 @@ let sample_list_to_yojson samples =
        )
     )
 
+let tag_list_to_yojson tags : Yojson.Safe.t =
+  `Assoc (tags :> (string * Yojson.Safe.t) list)
+
 type t = {
   samples : sample list; [@to_yojson sample_list_to_yojson]
+  tags : (tag list[@to_yojson tag_list_to_yojson]) option;
   timestamp : int;
 }
 [@@deriving to_yojson, make]
@@ -96,5 +108,5 @@ let system () =
   Lwt.return
     ( match ram_samples @ cpu_samples with
     | [] -> None
-    | samples -> Some { samples; timestamp }
+    | samples -> Some (make ~samples ~timestamp ())
     )

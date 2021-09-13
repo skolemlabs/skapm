@@ -71,5 +71,15 @@ let () =
   let context =
     Elastic_apm.Context.make ~secret_token ~service_name ~apm_server:url ()
   in
-  Elastic_apm.Apm.init ~enable_system_metrics:true context;
+  Logs.set_reporter @@ Logs_fmt.reporter ();
+  Elastic_apm.Apm.init ~enable_system_metrics:true ~log_level:Logs.Debug context;
+  Random.self_init ();
+  let custom_metric =
+    Elastic_apm.Metric.make
+      ~tags:[ ("Name", `String "My Metric") ]
+      ~samples:[ ("ocaml.test_metric", `Int (Random.bits ())) ]
+      ~timestamp:(Elastic_apm.Timestamp.now_ms ())
+      ()
+  in
+  Elastic_apm.Apm.send [ Metric custom_metric ];
   Lwt_main.run server |> ignore
