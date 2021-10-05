@@ -1,22 +1,22 @@
 (lang dune 2.5)
 
-(name elastic-apm)
+(name skapm)
 
 (license Apache-2.0)
 (maintainers
- "Adam Ringwood <adam.ringwood@elastic.co>"
- "Hezekiah M. Carty <hezekiah.carty@elastic.co>")
+ "Zach Baylin <zach@skolem.tech>")
 (authors
+ "Zach Baylin <zach@skolem.tech>"
  "Adam Ringwood <adam.ringwood@elastic.co>"
  "Hezekiah M. Carty <hezekiah.carty@elastic.co>")
 
-(source (github elastic/apm-agent-ocaml))
+(source (github skolemlabs/skapm))
 
 (generate_opam_files true)
 
 (package
- (name elastic-apm)
- (synopsis "Elastic Application Performance Monitoring (APM) client library")
+ (name skapm)
+ (synopsis "Application Performance Monitoring (APM) client library for Elastic")
  (depends
   (ocaml (>= 4.08.0))
   (cohttp-lwt-unix (>= 2.5.4))
