@@ -16,17 +16,17 @@ module Handlers = struct
     let list =
       List.init sections (fun i () ->
           let context =
-            Elastic_apm.Span.Context.make ~tags:[ ("index", `Int i) ] ()
+            Skapm.Span.Context.make ~tags:[ ("index", `Int i) ] ()
           in
           let span =
-            Elastic_apm.Span.make_span ~context
+            Skapm.Span.make_span ~context
               ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
           Lwt_unix.sleep (length /. float sections) >|= fun () ->
-          let (_ : Elastic_apm.Span.result) =
-            Elastic_apm.Span.finalize_and_send span
+          let (_ : Skapm.Span.result) =
+            Skapm.Span.finalize_and_send span
           in
           ()
       )
@@ -39,9 +39,9 @@ end
 
 let route req =
   let path = req |> Request.uri |> Uri.path in
-  let trace = Elastic_apm.Trace.of_headers (req |> Request.headers) in
+  let trace = Skapm.Trace.of_headers (req |> Request.headers) in
   let (_, transaction) =
-    Elastic_apm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
+    Skapm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
       ()
   in
   ( match path with
@@ -51,8 +51,8 @@ let route req =
   )
   >|= fun resp ->
   let (status, body) = resp in
-  let (_ : Elastic_apm.Transaction.result) =
-    Elastic_apm.Transaction.finalize_and_send transaction
+  let (_ : Skapm.Transaction.result) =
+    Skapm.Transaction.finalize_and_send transaction
   in
   (status, body)
 
@@ -69,17 +69,17 @@ let () =
   let secret_token = Sys.getenv "APM_SECRET_TOKEN" in
   let url = Sys.getenv "APM_URL" |> Uri.of_string in
   let context =
-    Elastic_apm.Context.make ~secret_token ~service_name ~apm_server:url ()
+    Skapm.Context.make ~secret_token ~service_name ~apm_server:url ()
   in
   Logs.set_reporter @@ Logs_fmt.reporter ();
-  Elastic_apm.Apm.init ~enable_system_metrics:true ~log_level:Logs.Debug context;
+  Skapm.Apm.init ~enable_system_metrics:true ~log_level:Logs.Debug context;
   Random.self_init ();
   let custom_metric =
-    Elastic_apm.Metric.make
+    Skapm.Metric.make
       ~tags:[ ("Name", `String "My Metric") ]
       ~samples:[ ("ocaml.test_metric", `Int (Random.bits ())) ]
-      ~timestamp:(Elastic_apm.Timestamp.now_ms ())
+      ~timestamp:(Skapm.Timestamp.now_ms ())
       ()
   in
-  Elastic_apm.Apm.send [ Metric custom_metric ];
+  Skapm.Apm.send [ Metric custom_metric ];
   Lwt_main.run server |> ignore
