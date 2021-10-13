@@ -6,8 +6,10 @@ type process = {
 }
 [@@deriving to_yojson, make]
 
-let current_process =
-  let argv = Sys.argv |> Array.to_list in
+let current_process () =
+  let argv = match !Conf.include_cli_args with
+  | true -> Sys.argv |> Array.to_list 
+  | false -> [] in
   let title = Sys.executable_name in
   let pid = Unix.getpid () in
   let ppid = Unix.getppid () in
@@ -72,4 +74,4 @@ let to_message_yojson t = `Assoc [ ("metadata", to_yojson t) ]
 
 let make ~name =
   let service = make_service name in
-  make ~process:current_process ~system:current_system ~service
+  make ~process:(current_process ()) ~system:current_system ~service
