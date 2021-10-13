@@ -7,8 +7,6 @@ module Sender = struct
 
   let global_sender : t option ref = ref None
 
-  let enable_system_metrics : bool ref = ref false
-
   let make_headers (context : Context.t) =
     let headers = [ ("content-type", "application/x-ndjson") ] in
     match context with
@@ -60,7 +58,7 @@ module Sender = struct
       | None -> sleep ()
       | Some { max_message_batch_size; context; send } ->
         let (send, max_message_batch_size) =
-          if !enable_system_metrics then
+          if !Conf.enable_system_metrics then
             ( (fun messages ->
                 let* system_metrics = Metric.system () in
                 match system_metrics with
@@ -96,10 +94,12 @@ let init
     ?(max_message_batch_size = 50)
     ?(send = Sender.send)
     ?(enable_system_metrics = false)
+    ?(include_cli_args = true)
     ?(log_level : Logs.level option)
     context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
-  Sender.enable_system_metrics := enable_system_metrics;
+  Conf.enable_system_metrics := enable_system_metrics;
+  Conf.include_cli_args := include_cli_args;
   Log.set_level log_level;
   Lwt.async Sender.run_forever
 
