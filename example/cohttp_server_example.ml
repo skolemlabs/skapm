@@ -19,15 +19,12 @@ module Handlers = struct
             Skapm.Span.Context.make ~tags:[ ("index", `Int i) ] ()
           in
           let span =
-            Skapm.Span.make_span ~context
-              ~parent:(`Transaction transaction)
+            Skapm.Span.make_span ~context ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
           Lwt_unix.sleep (length /. float sections) >|= fun () ->
-          let (_ : Skapm.Span.result) =
-            Skapm.Span.finalize_and_send span
-          in
+          let (_ : Skapm.Span.result) = Skapm.Span.finalize_and_send span in
           ()
       )
     in
@@ -41,8 +38,7 @@ let route req =
   let path = req |> Request.uri |> Uri.path in
   let trace = Skapm.Trace.of_headers (req |> Request.headers) in
   let (_, transaction) =
-    Skapm.Transaction.make_transaction ~trace ~name:path ~type_:"request"
-      ()
+    Skapm.Transaction.make_transaction ~trace ~name:path ~type_:"request" ()
   in
   ( match path with
   | "/" -> Handlers.root req
