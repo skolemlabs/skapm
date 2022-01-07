@@ -32,10 +32,10 @@ type t = {
   trace_id : string;
 }
 
-let finalize t = t.finalize ()
+let finalize ?response t = t.finalize ?response ()
 
-let finalize_and_send t =
-  let result = t.finalize () in
+let finalize_and_send ?response t =
+  let result = t.finalize ?response () in
   Message_queue.push (to_message_yojson result);
   result
 
