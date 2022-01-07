@@ -7,9 +7,11 @@ type process = {
 [@@deriving to_yojson, make]
 
 let current_process () =
-  let argv = match !Conf.include_cli_args with
-  | true -> Sys.argv |> Array.to_list 
-  | false -> [] in
+  let argv =
+    match !Conf.include_cli_args with
+    | true -> Sys.argv |> Array.to_list
+    | false -> []
+  in
   let title = Sys.executable_name in
   let pid = Unix.getpid () in
   let ppid = Unix.getppid () in
