@@ -26,8 +26,8 @@ type result = {
   parent_id : string;
   duration : float;
   type_ : string; [@key "type"]
-  subtype : string;
-  action : string;
+  subtype : string option;
+  action : string option;
   context : Context.t option;
 }
 [@@deriving to_yojson, make]
@@ -57,8 +57,8 @@ let make_span
     ~(parent : parent)
     ~name
     ~type_
-    ~subtype
-    ~action
+    ?subtype
+    ?action
     () =
   let id = Id.make () in
   let (parent_id, trace_id) =
@@ -74,6 +74,6 @@ let make_span
     let finished_time = Mtime_clock.count now in
     let duration = Mtime.Span.to_ms finished_time in
     make_result ~id ~name ~timestamp ~trace_id ~parent_id ~duration ~type_
-      ~subtype ~action ~context ()
+      ?subtype ?action ~context ()
   in
   { finalize; id; trace_id }
