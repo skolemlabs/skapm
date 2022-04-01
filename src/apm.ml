@@ -48,14 +48,18 @@ module Sender = struct
             body
       )
 
-  let sleep () = Lwt_unix.sleep 5.0
+  let dynamic_sleep () =
+    let queue_size = Message_queue.size () in
+    let roomf = float (!Conf.max_queue_size - queue_size) in
+    Lwt_unix.sleep
+      ((!Conf.sleep_ratio *. roomf) +. (0.1 *. float !Conf.max_queue_size))
 
   let rec run_forever () =
     let ( let* ) = Lwt.bind in
     let open Lwt in
     let* () =
       match !global_sender with
-      | None -> sleep ()
+      | None -> Lwt_unix.sleep !Conf.max_wait_time
       | Some { max_message_batch_size; context; send } ->
         let (send, max_message_batch_size) =
           if !Conf.enable_system_metrics then
@@ -85,13 +89,15 @@ module Sender = struct
           in
           send messages
         )
-        >>= sleep
+        >>= dynamic_sleep
     in
     run_forever ()
 end
 
 let init
-    ?(max_message_batch_size = 50)
+    ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
+    ?(max_queue_size = Conf.Defaults.max_queue_size)
+    ?(max_wait_time = Conf.Defaults.max_wait_time)
     ?(send = Sender.send)
     ?(enable_system_metrics = false)
     ?(include_cli_args = true)
@@ -100,6 +106,9 @@ let init
   Sender.global_sender := Some { max_message_batch_size; context; send };
   Conf.enable_system_metrics := enable_system_metrics;
   Conf.include_cli_args := include_cli_args;
+  Conf.max_queue_size := max_queue_size;
+  Conf.max_wait_time := max_wait_time;
+  Conf.sleep_ratio := 0.9 *. max_wait_time /. float max_queue_size;
   Log.set_level log_level;
   Lwt.async Sender.run_forever
 
