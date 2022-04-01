@@ -1,9 +1,9 @@
 let q : Yojson.Safe.t Queue.t = Queue.create ()
-let max_length = ref 1000
+let max_length = 1000
 
 let rec make_room () =
   let length = Queue.length q in
-  if length > 0 && length >= !max_length then (
+  if length > 0 && length >= max_length then (
     let _discarded = Queue.take q in
     make_room ()
   )
