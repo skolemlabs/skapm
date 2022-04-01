@@ -51,7 +51,8 @@ module Sender = struct
   let dynamic_sleep () =
     let queue_size = Message_queue.size () in
     let roomf = float (!Conf.max_queue_size - queue_size) in
-    Lwt_unix.sleep (!Conf.ratio_of_max_wait_time_to_max_queue_size *. roomf)
+    Lwt_unix.sleep
+      ((!Conf.sleep_ratio *. roomf) +. (0.1 *. float !Conf.max_queue_size))
 
   let rec run_forever () =
     let ( let* ) = Lwt.bind in
@@ -107,8 +108,7 @@ let init
   Conf.include_cli_args := include_cli_args;
   Conf.max_queue_size := max_queue_size;
   Conf.max_wait_time := max_wait_time;
-  Conf.ratio_of_max_wait_time_to_max_queue_size :=
-    max_wait_time /. float max_queue_size;
+  Conf.sleep_ratio := 0.9 *. max_wait_time /. float max_queue_size;
   Log.set_level log_level;
   Lwt.async Sender.run_forever
 
