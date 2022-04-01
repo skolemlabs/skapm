@@ -59,7 +59,7 @@ module Sender = struct
     let open Lwt in
     let* () =
       match !global_sender with
-      | None -> Lwt_unix.sleep 5.0
+      | None -> Lwt_unix.sleep !Conf.max_wait_time
       | Some { max_message_batch_size; context; send } ->
         let (send, max_message_batch_size) =
           if !Conf.enable_system_metrics then
