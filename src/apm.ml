@@ -83,7 +83,7 @@ module Sender = struct
         | [] -> Lwt.return_unit
         | _ ->
           let* () =
-            Log.debug (fun m ->
+            Logs_lwt.debug (fun m ->
                 m "Sending messages: %a"
                   (Fmt.list Yojson.Safe.pretty_print)
                   messages

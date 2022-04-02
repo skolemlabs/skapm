@@ -35,7 +35,7 @@ module Handlers = struct
       )
     in
     list |> Lwt_list.map_s (fun c -> c ()) >|= fun _ ->
-    (`OK, Printf.sprintf "Slept for %fs" length)
+    (`OK, Printf.sprintf "Collected %d spans over %fs" sections length)
 
   let not_found _ = Lwt.return (`Not_found, "Not found")
 end
