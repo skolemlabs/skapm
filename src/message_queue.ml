@@ -2,19 +2,18 @@ let q : Yojson.Safe.t Queue.t = Queue.create ()
 
 let size () = Queue.length q
 
-let rec make_room () =
+let rec make_room num_dropped =
   let length = Queue.length q in
   if length > 0 && length >= !Conf.max_queue_size then (
-    let discarded = Queue.take q in
+    let (_ : Yojson.Safe.t) = Queue.take q in
+    make_room (num_dropped + 1)
+  ) else if num_dropped > 0 then
     Logs.warn (fun m ->
-        m "Dropping APM message due to queue exceeding max size: %a"
-          Yojson.Safe.pp discarded
-    );
-    make_room ()
-  )
+        m "Forced to drop %d message(s) to make room in queue" num_dropped
+    )
 
 let push message =
-  make_room ();
+  make_room 0;
   Queue.push message q
 
 let pop_n ~max =
