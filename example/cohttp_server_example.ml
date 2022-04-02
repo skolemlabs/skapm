@@ -12,7 +12,13 @@ module Handlers = struct
       |> Option.map float_of_string
       |> Option.value ~default:2.
     in
-    let sections = 4 in
+    let sections =
+      req
+      |> Request.uri
+      |> (fun uri -> Uri.get_query_param uri "sections")
+      |> Option.map int_of_string
+      |> Option.value ~default:4
+    in
     let list =
       List.init sections (fun i () ->
           let context =
