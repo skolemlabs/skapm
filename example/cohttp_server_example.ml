@@ -12,7 +12,13 @@ module Handlers = struct
       |> Option.map float_of_string
       |> Option.value ~default:2.
     in
-    let sections = 4 in
+    let sections =
+      req
+      |> Request.uri
+      |> (fun uri -> Uri.get_query_param uri "sections")
+      |> Option.map int_of_string
+      |> Option.value ~default:4
+    in
     let list =
       List.init sections (fun i () ->
           let context =
@@ -29,7 +35,7 @@ module Handlers = struct
       )
     in
     list |> Lwt_list.map_s (fun c -> c ()) >|= fun _ ->
-    (`OK, Printf.sprintf "Slept for %fs" length)
+    (`OK, Printf.sprintf "Collected %d spans over %fs" sections length)
 
   let not_found _ = Lwt.return (`Not_found, "Not found")
 end

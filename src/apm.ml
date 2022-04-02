@@ -51,8 +51,10 @@ module Sender = struct
   let dynamic_sleep () =
     let queue_size = Message_queue.size () in
     let roomf = float (!Conf.max_queue_size - queue_size) in
-    Lwt_unix.sleep
-      ((!Conf.sleep_ratio *. roomf) +. (0.1 *. float !Conf.max_queue_size))
+    let sleep_time =
+      (!Conf.sleep_ratio *. roomf) +. (0.1 *. !Conf.max_wait_time)
+    in
+    Lwt_unix.sleep sleep_time
 
   let rec run_forever () =
     let ( let* ) = Lwt.bind in
@@ -81,7 +83,7 @@ module Sender = struct
         | [] -> Lwt.return_unit
         | _ ->
           let* () =
-            Log.debug (fun m ->
+            Logs_lwt.debug (fun m ->
                 m "Sending messages: %a"
                   (Fmt.list Yojson.Safe.pretty_print)
                   messages
