@@ -30,6 +30,8 @@ type t = {
 
 let to_message_yojson t = `Assoc [ ("metricset", to_yojson t) ]
 
+let send t = Message_queue.push (to_message_yojson t)
+
 let prev_idle_time = ref None
 let prev_total_time = ref None
 
