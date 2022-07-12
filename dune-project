@@ -14,6 +14,8 @@
 
 (generate_opam_files true)
 
+(version 1.2.2)
+
 (package
  (name skapm)
  (synopsis "Application Performance Monitoring (APM) client library for Elastic")
