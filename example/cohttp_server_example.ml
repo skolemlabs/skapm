@@ -83,5 +83,5 @@ let () =
       ~timestamp:(Skapm.Timestamp.now_ms ())
       ()
   in
-  Skapm.Apm.send [ Metric custom_metric ];
+  Skapm.Metric.send custom_metric;
   Lwt_main.run server |> ignore
