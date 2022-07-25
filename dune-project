@@ -14,7 +14,7 @@
 
 (generate_opam_files true)
 
-(version 1.2.2)
+(version 1.2.3)
 
 (package
  (name skapm)
