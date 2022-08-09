@@ -20,7 +20,7 @@ let wrap_call
     v
   | exception exn ->
     let st = Printexc.get_raw_backtrace () in
-    let error = Error.make ~parent:(parent :> Error.parent) st exn in
+    let error = Error.of_exn ~parent:(parent :> Error.parent) st exn in
     Message_queue.push (Error.to_message_yojson error);
     let (_ : Span.result) = Span.finalize_and_send span in
     raise exn

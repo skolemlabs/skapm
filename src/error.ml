@@ -57,7 +57,7 @@ let to_message_yojson t = `Assoc [ ("error", to_yojson t) ]
 
 let send t = Message_queue.push (to_message_yojson t)
 
-let make ?(parent : parent option) st (exn : exn) : t =
+let of_exn ?(parent : parent option) st (exn : exn) : t =
   let id = Id.make () in
   let timestamp = Timestamp.now_ms () in
   let (parent_id, trace_id) =

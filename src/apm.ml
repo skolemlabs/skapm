@@ -133,7 +133,7 @@ let with_transaction ?trace ~name ~type_ f =
     send
       [
         Transaction (Transaction.finalize transaction);
-        Error (Error.make ~parent:(`Trace trace) st exn);
+        Error (Error.of_exn ~parent:(`Trace trace) st exn);
       ];
     raise exn
 
@@ -150,7 +150,7 @@ let with_transaction_lwt ?trace ~name ~type_ f =
     send
       [
         Transaction (Transaction.finalize transaction);
-        Error (Error.make ~parent:(`Trace trace) st exn);
+        Error (Error.of_exn ~parent:(`Trace trace) st exn);
       ];
     Lwt.fail exn
   in
