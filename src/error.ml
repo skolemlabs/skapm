@@ -32,7 +32,7 @@ module Exception = struct
   }
   [@@deriving to_yojson, make]
 
-  let make st (exn : exn) : t =
+  let of_exn st (exn : exn) : t =
     let stacktrace = Stack_trace.make_stacktrace st in
     make ~message:(Printexc.to_string exn) ~type_:"exn" ~stacktrace
 end
@@ -57,7 +57,7 @@ let to_message_yojson t = `Assoc [ ("error", to_yojson t) ]
 
 let send t = Message_queue.push (to_message_yojson t)
 
-let make ?(parent : parent option) st (exn : exn) : t =
+let of_exn ?(parent : parent option) st (exn : exn) : t =
   let id = Id.make () in
   let timestamp = Timestamp.now_ms () in
   let (parent_id, trace_id) =
@@ -68,5 +68,5 @@ let make ?(parent : parent option) st (exn : exn) : t =
     | Some (`Trace trace) -> (None, Some trace.trace_id)
     | None -> (None, None)
   in
-  let exception_ = Exception.make st exn in
+  let exception_ = Exception.of_exn st exn in
   make ~id ~timestamp ?trace_id ?parent_id ~exception_ ()
