@@ -67,8 +67,8 @@ let parent_ids (parent : parent option) =
 
 let of_result
     ?(parent : parent option)
-    (res : (_, 'err) result)
-    (pp : 'err Fmt.t) =
+    ~(pp : 'err Fmt.t)
+    (res : (_, 'err) result) =
   match res with
   | Error e ->
     let id = Id.make () in
