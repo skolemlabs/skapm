@@ -76,7 +76,7 @@ let of_result
     let (parent_id, trace_id) = parent_ids parent in
     let msg = Fmt.str "%a" pp e in
     let exception_ =
-      Exception.{ message = msg; type_ = "result"; stacktrace = [] }
+      Exception.make ~message:msg ~type_:"result" ~stacktrace:[]
     in
     Some (make ~id ~timestamp ?trace_id ?parent_id ~exception_ ())
   | Ok _ -> None
