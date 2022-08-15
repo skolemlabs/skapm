@@ -25,8 +25,8 @@ let add_transaction_id_if_missing (trace : t) : t =
   match trace.transaction_id with
   | Some _ -> trace
   | None ->
-    let transaction_id = Some (Id.make ()) in
-    { trace with transaction_id }
+      let transaction_id = Some (Id.make ()) in
+      { trace with transaction_id }
 
 let of_headers headers =
   let trace_id =
@@ -52,5 +52,6 @@ let to_header_list (trace : t) =
     ]
 
 let to_headers trace = Cohttp.Header.of_list (to_header_list trace)
+
 let add_to_headers headers trace =
   Cohttp.Header.add_list headers (to_header_list trace)

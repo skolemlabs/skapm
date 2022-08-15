@@ -12,7 +12,7 @@ module Sender = struct
     match context with
     | { api_key = Some key; _ } -> ("Authorization", "ApiKey " ^ key) :: headers
     | { secret_token = Some token; _ } ->
-      ("Authorization", "Bearer " ^ token) :: headers
+        ("Authorization", "Bearer " ^ token) :: headers
     | _ -> headers
 
   let make_body (context : Context.t) (events : Yojson.Safe.t list) =
@@ -30,7 +30,7 @@ module Sender = struct
     let headers = Cohttp.Header.of_list (make_headers context) in
     let body_str = make_body context events in
     let body = Cohttp_lwt.Body.of_string body_str in
-    let* (response, response_body) =
+    let* response, response_body =
       Cohttp_lwt_unix.Client.post ~headers ~body uri
     in
     let* response_body = Cohttp_lwt.Body.to_string response_body in
@@ -38,15 +38,14 @@ module Sender = struct
 
   let send context messages =
     let ( let* ) = Lwt.bind in
-    let* (response, body) = post context messages in
+    let* response, body = post context messages in
     match response.status with
     | #Cohttp.Code.success_status -> Lwt.return_unit
     | _ ->
-      Log.warn (fun m ->
-          m "APM server response %d: %s"
-            (Cohttp.Code.code_of_status response.status)
-            body
-      )
+        Log.warn (fun m ->
+            m "APM server response %d: %s"
+              (Cohttp.Code.code_of_status response.status)
+              body)
 
   let dynamic_sleep () =
     let queue_size = Message_queue.size () in
@@ -63,48 +62,39 @@ module Sender = struct
       match !global_sender with
       | None -> Lwt_unix.sleep !Conf.max_wait_time
       | Some { max_message_batch_size; context; send } ->
-        let (send, max_message_batch_size) =
-          if !Conf.enable_system_metrics then
-            ( (fun messages ->
-                let* system_metrics = Metric.system () in
-                match system_metrics with
-                | Some metrics ->
-                  send context
-                    ((metrics |> Metric.to_message_yojson) :: messages)
-                | None -> send context messages
-                ),
-              max_message_batch_size - 1
-            )
-          else
-            (send context, max_message_batch_size)
-        in
-        let messages = Message_queue.pop_n ~max:max_message_batch_size in
-        ( match messages with
-        | [] -> Lwt.return_unit
-        | _ ->
-          let* () =
-            Logs_lwt.debug (fun m ->
-                m "Sending messages: %a"
-                  (Fmt.list Yojson.Safe.pretty_print)
-                  messages
-            )
+          let send, max_message_batch_size =
+            if !Conf.enable_system_metrics then
+              ( (fun messages ->
+                  let* system_metrics = Metric.system () in
+                  match system_metrics with
+                  | Some metrics ->
+                      send context
+                        ((metrics |> Metric.to_message_yojson) :: messages)
+                  | None -> send context messages),
+                max_message_batch_size - 1 )
+            else (send context, max_message_batch_size)
           in
-          send messages
-        )
-        >>= dynamic_sleep
+          let messages = Message_queue.pop_n ~max:max_message_batch_size in
+          (match messages with
+          | [] -> Lwt.return_unit
+          | _ ->
+              let* () =
+                Logs_lwt.debug (fun m ->
+                    m "Sending messages: %a"
+                      (Fmt.list Yojson.Safe.pretty_print)
+                      messages)
+              in
+              send messages)
+          >>= dynamic_sleep
     in
     run_forever ()
 end
 
-let init
-    ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
+let init ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
     ?(max_queue_size = Conf.Defaults.max_queue_size)
-    ?(max_wait_time = Conf.Defaults.max_wait_time)
-    ?(send = Sender.send)
-    ?(enable_system_metrics = false)
-    ?(include_cli_args = true)
-    ?(log_level : Logs.level option)
-    context =
+    ?(max_wait_time = Conf.Defaults.max_wait_time) ?(send = Sender.send)
+    ?(enable_system_metrics = false) ?(include_cli_args = true)
+    ?(log_level : Logs.level option) context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
   Conf.enable_system_metrics := enable_system_metrics;
   Conf.include_cli_args := include_cli_args;
@@ -118,27 +108,27 @@ let send messages =
   match !Sender.global_sender with
   | None -> ()
   | Some _c ->
-    List.iter Message_queue.push (messages |> List.map Message.to_yojson)
+      List.iter Message_queue.push (messages |> List.map Message.to_yojson)
 
 let with_transaction ?trace ~name ~type_ f =
-  let (trace, transaction) =
+  let trace, transaction =
     Transaction.make_transaction ?trace ~name ~type_ ()
   in
   match f () with
   | x ->
-    send [ Transaction (Transaction.finalize transaction) ];
-    x
+      send [ Transaction (Transaction.finalize transaction) ];
+      x
   | exception exn ->
-    let st = Printexc.get_raw_backtrace () in
-    send
-      [
-        Transaction (Transaction.finalize transaction);
-        Error (Error.of_exn ~parent:(`Trace trace) st exn);
-      ];
-    raise exn
+      let st = Printexc.get_raw_backtrace () in
+      send
+        [
+          Transaction (Transaction.finalize transaction);
+          Error (Error.of_exn ~parent:(`Trace trace) st exn);
+        ];
+      raise exn
 
 let with_transaction_lwt ?trace ~name ~type_ f =
-  let (trace, transaction) =
+  let trace, transaction =
     Transaction.make_transaction ?trace ~name ~type_ ()
   in
   let on_success x =

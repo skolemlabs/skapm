@@ -1,9 +1,4 @@
-type process = {
-  pid : int;
-  title : string;
-  ppid : int;
-  argv : string list;
-}
+type process = { pid : int; title : string; ppid : int; argv : string list }
 [@@deriving to_yojson, make]
 
 let current_process () =
@@ -30,11 +25,7 @@ let current_system =
   let configured_hostname = Unix.gethostname () in
   make_system ~architecture ~detected_hostname ~configured_hostname
 
-type agent = {
-  name : string;
-  version : string;
-}
-[@@deriving to_yojson, make]
+type agent = { name : string; version : string } [@@deriving to_yojson, make]
 
 let agent =
   let name = "OCaml" in
@@ -45,31 +36,19 @@ let agent =
   in
   make_agent ~name ~version
 
-type runtime = {
-  name : string;
-  version : string;
-}
-[@@deriving to_yojson, make]
+type runtime = { name : string; version : string } [@@deriving to_yojson, make]
 
 let current_runtime =
   let name = "OCaml" in
   let version = Sys.ocaml_version in
   make_runtime ~name ~version
 
-type service = {
-  name : string;
-  runtime : runtime;
-  agent : agent;
-}
+type service = { name : string; runtime : runtime; agent : agent }
 [@@deriving to_yojson, make]
 
 let make_service name = make_service ~name ~runtime:current_runtime ~agent
 
-type t = {
-  process : process;
-  system : system;
-  service : service;
-}
+type t = { process : process; system : system; service : service }
 [@@deriving to_yojson, make]
 
 let to_message_yojson t = `Assoc [ ("metadata", to_yojson t) ]
