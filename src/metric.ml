@@ -1,22 +1,14 @@
 open Lwt
 
-type yojson_num =
-  [ `Float of float
-  | `Int of int
-  | `Intlit of string
-  ]
-
+type yojson_num = [ `Float of float | `Int of int | `Intlit of string ]
 type sample = string * yojson_num
-
 type tag = string * [ `String of string | `Bool of bool | yojson_num ]
 
 let sample_list_to_yojson samples =
   `Assoc
     (samples
     |> List.map (fun (prop, value) ->
-           (prop, `Assoc [ ("value", (value :> Yojson.Safe.t)) ])
-       )
-    )
+           (prop, `Assoc [ ("value", (value :> Yojson.Safe.t)) ])))
 
 let tag_list_to_yojson tags : Yojson.Safe.t =
   `Assoc (tags :> (string * Yojson.Safe.t) list)
@@ -29,9 +21,7 @@ type t = {
 [@@deriving to_yojson, make]
 
 let to_message_yojson t = `Assoc [ ("metricset", to_yojson t) ]
-
 let send t = Message_queue.push (to_message_yojson t)
-
 let prev_idle_time = ref None
 let prev_total_time = ref None
 
@@ -44,23 +34,22 @@ let get_cpu_usage file =
         let total_time = ref Int64.zero in
         Scanf.sscanf str "cpu %Lu %Lu %Lu %Lu" (fun t1 t2 t3 t4 ->
             total_time := t1 ++ t2 ++ t3 ++ t4;
-            idle_time := t4
-        );
+            idle_time := t4);
         let cpu_usage =
           match (!prev_idle_time, !prev_total_time) with
-          | (Some prev_idle_time, Some prev_total_time) ->
-            let delta_idle_time = !idle_time -- prev_idle_time in
-            let delta_total_time = !total_time -- prev_total_time in
-            let inverse =
-              Int64.to_float delta_idle_time /. Int64.to_float delta_total_time
-            in
-            Some (1.0 -. inverse)
+          | Some prev_idle_time, Some prev_total_time ->
+              let delta_idle_time = !idle_time -- prev_idle_time in
+              let delta_total_time = !total_time -- prev_total_time in
+              let inverse =
+                Int64.to_float delta_idle_time
+                /. Int64.to_float delta_total_time
+              in
+              Some (1.0 -. inverse)
           | _ -> None
         in
         prev_idle_time := Some !idle_time;
         prev_total_time := Some !total_time;
-        cpu_usage
-        )
+        cpu_usage)
   |> Lwt_result.catch
 
 let get_total_memory file =
@@ -68,8 +57,7 @@ let get_total_memory file =
   >|= (fun str ->
         let mem_total = ref Int64.zero in
         Scanf.sscanf str "MemTotal: %Lu kB" (fun d -> mem_total := d);
-        Int64.mul !mem_total 1024L
-        )
+        Int64.mul !mem_total 1024L)
   |> Lwt_result.catch
 
 let get_free_memory file =
@@ -77,10 +65,8 @@ let get_free_memory file =
   >|= (fun str ->
         let memFree = ref Int64.zero in
         Scanf.sscanf str "MemTotal: %_lu kB\nMemFree: %Lu kB" (fun d ->
-            memFree := d
-        );
-        Int64.mul !memFree 1024L
-        )
+            memFree := d);
+        Int64.mul !memFree 1024L)
   |> Lwt_result.catch
 
 let system () =
@@ -92,13 +78,13 @@ let system () =
   let* free_memory = get_free_memory meminfo in
   let ram_samples =
     match (total_memory, free_memory) with
-    | (Ok total_memory, Ok free_memory) ->
-      let total_memory_str = Printf.sprintf "%Lu" total_memory in
-      let free_memory_str = Printf.sprintf "%Lu" free_memory in
-      [
-        ("system.memory.total", `Intlit total_memory_str);
-        ("system.memory.actual.free", `Intlit free_memory_str);
-      ]
+    | Ok total_memory, Ok free_memory ->
+        let total_memory_str = Printf.sprintf "%Lu" total_memory in
+        let free_memory_str = Printf.sprintf "%Lu" free_memory in
+        [
+          ("system.memory.total", `Intlit total_memory_str);
+          ("system.memory.actual.free", `Intlit free_memory_str);
+        ]
     | _ -> []
   in
   let* cpu_usage = get_cpu_usage proc_stat in
@@ -108,7 +94,6 @@ let system () =
     | _ -> []
   in
   Lwt.return
-    ( match ram_samples @ cpu_samples with
+    (match ram_samples @ cpu_samples with
     | [] -> None
-    | samples -> Some (make ~samples ~timestamp ())
-    )
+    | samples -> Some (make ~samples ~timestamp ()))

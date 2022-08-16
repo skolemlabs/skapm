@@ -39,15 +39,10 @@ let finalize_and_send ?response t =
   Message_queue.push (to_message_yojson result);
   result
 
-let make_transaction
-    ?(trace : Trace.t option)
-    ?(tags : Tag.t list option)
-    ?request
-    ~name
-    ~type_
-    () =
+let make_transaction ?(trace : Trace.t option) ?(tags : Tag.t list option)
+    ?request ~name ~type_ () =
   let id = Id.make () in
-  let (parent_id, trace_id) =
+  let parent_id, trace_id =
     match trace with
     | Some t -> (t.transaction_id, t.trace_id)
     | None -> (None, Id.make ())

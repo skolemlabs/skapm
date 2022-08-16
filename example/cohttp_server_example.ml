@@ -6,18 +6,14 @@ module Handlers = struct
 
   let sleep req transaction =
     let length =
-      req
-      |> Request.uri
+      req |> Request.uri
       |> (fun uri -> Uri.get_query_param uri "length")
-      |> Option.map float_of_string
-      |> Option.value ~default:2.
+      |> Option.map float_of_string |> Option.value ~default:2.
     in
     let sections =
-      req
-      |> Request.uri
+      req |> Request.uri
       |> (fun uri -> Uri.get_query_param uri "sections")
-      |> Option.map int_of_string
-      |> Option.value ~default:4
+      |> Option.map int_of_string |> Option.value ~default:4
     in
     let list =
       List.init sections (fun i () ->
@@ -31,8 +27,7 @@ module Handlers = struct
           in
           Lwt_unix.sleep (length /. float sections) >|= fun () ->
           let (_ : Skapm.Span.result) = Skapm.Span.finalize_and_send span in
-          ()
-      )
+          ())
     in
     list |> Lwt_list.map_s (fun c -> c ()) >|= fun _ ->
     (`OK, Printf.sprintf "Collected %d spans over %fs" sections length)
@@ -43,16 +38,15 @@ end
 let route req =
   let path = req |> Request.uri |> Uri.path in
   let trace = Skapm.Trace.of_headers (req |> Request.headers) in
-  let (_, transaction) =
+  let _, transaction =
     Skapm.Transaction.make_transaction ~trace ~name:path ~type_:"request" ()
   in
-  ( match path with
+  (match path with
   | "/" -> Handlers.root req
   | "/sleep" -> Handlers.sleep req transaction
-  | _ -> Handlers.not_found req
-  )
+  | _ -> Handlers.not_found req)
   >|= fun resp ->
-  let (status, body) = resp in
+  let status, body = resp in
   let (_ : Skapm.Transaction.result) =
     Skapm.Transaction.finalize_and_send transaction
   in

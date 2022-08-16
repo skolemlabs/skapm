@@ -7,7 +7,5 @@ let make_uuid =
   fun () -> gen ()
 
 let make () =
-  make_uuid ()
-  |> Uuidm.to_string
-  |> String.split_on_char '-'
+  make_uuid () |> Uuidm.to_string |> String.split_on_char '-'
   |> String.concat ""
