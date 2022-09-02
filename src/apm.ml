@@ -1,3 +1,5 @@
+open Logger
+
 module Sender = struct
   type t = {
     max_message_batch_size : int;
@@ -42,7 +44,7 @@ module Sender = struct
     match response.status with
     | #Cohttp.Code.success_status -> Lwt.return_unit
     | _ ->
-        Log.warn (fun m ->
+        Log_lwt.warn (fun m ->
             m "APM server response %d: %s"
               (Cohttp.Code.code_of_status response.status)
               body)
@@ -79,7 +81,7 @@ module Sender = struct
           | [] -> Lwt.return_unit
           | _ ->
               let* () =
-                Logs_lwt.debug (fun m ->
+                Log_lwt.debug (fun m ->
                     m "Sending messages: %a"
                       (Fmt.list Yojson.Safe.pretty_print)
                       messages)
@@ -101,7 +103,7 @@ let init ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
   Conf.max_queue_size := max_queue_size;
   Conf.max_wait_time := max_wait_time;
   Conf.sleep_ratio := 0.9 *. max_wait_time /. float max_queue_size;
-  Log.set_level log_level;
+  Logger.set_level log_level;
   Lwt.async Sender.run_forever
 
 let send messages =

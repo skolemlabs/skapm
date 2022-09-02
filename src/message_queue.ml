@@ -1,3 +1,5 @@
+open Logger
+
 let q : Yojson.Safe.t Queue.t = Queue.create ()
 let size () = Queue.length q
 
@@ -7,7 +9,7 @@ let rec make_room num_dropped =
     let (_ : Yojson.Safe.t) = Queue.take q in
     make_room (num_dropped + 1)
   else if num_dropped > 0 then
-    Logs.warn (fun m ->
+    Log.warn (fun m ->
         m "Forced to drop %d message(s) to make room in queue" num_dropped)
 
 let push message =
