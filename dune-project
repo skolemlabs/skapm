@@ -27,6 +27,7 @@
   (ppx_deriving (>= 4.5))
   (ppx_deriving_yojson (>= 3.5.3))
   (ptime (>= 0.8.5))
+  (mtime (< 2.0.0))
   (uri (>= 3.0.0))
   (uuidm (>= 0.9.7))
   (yojson (>= 1.6.0))))

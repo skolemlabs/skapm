@@ -1,9 +1,10 @@
-open Lwt
-
 let read_file path =
-  Lwt_unix.openfile path [ Unix.O_RDONLY ] 0o640
-  >|= Lwt_io.of_fd ~mode:Lwt_io.Input
-  >>= Lwt_io.read
+  let ( let+ ) = Lwt.bind in
+  let+ fd = Lwt_unix.openfile path [ Unix.O_RDONLY ] 0o640 in
+  let io = Lwt_io.of_fd ~mode:Lwt_io.Input fd in
+  let+ str = Lwt_io.read io in
+  let+ () = Lwt_unix.close fd in
+  Lwt.return str
 
 let wrap_call ?(context = Span.Context.empty) ~name ~type_ ~subtype ~action
     ~parent (f : unit -> 'a) =
