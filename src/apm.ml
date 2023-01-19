@@ -95,10 +95,11 @@ end
 let init ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
     ?(max_queue_size = Conf.Defaults.max_queue_size)
     ?(max_wait_time = Conf.Defaults.max_wait_time) ?(send = Sender.send)
-    ?(enable_system_metrics = false) ?(include_cli_args = true)
-    ?(log_level : Logs.level option) context =
+    ?(enable_system_metrics = false) ?(enable_process_metrics = false)
+    ?(include_cli_args = true) ?(log_level : Logs.level option) context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
   Conf.enable_system_metrics := enable_system_metrics;
+  Conf.enable_process_metrics := enable_process_metrics;
   Conf.include_cli_args := include_cli_args;
   Conf.max_queue_size := max_queue_size;
   Conf.max_wait_time := max_wait_time;
