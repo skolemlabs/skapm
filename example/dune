@@ -1,3 +1,9 @@
 (executables
  (names cohttp_server_example)
+ (modules cohttp_server_example)
  (libraries skapm cohttp-lwt-unix))
+
+(executables
+ (names gc_metrics)
+ (modules gc_metrics)
+ (libraries skapm))
