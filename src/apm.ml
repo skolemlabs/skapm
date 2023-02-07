@@ -64,29 +64,28 @@ module Sender = struct
       match !global_sender with
       | None -> Lwt_unix.sleep !Conf.max_wait_time
       | Some { max_message_batch_size; context; send } ->
-          let send, max_message_batch_size =
-            if !Conf.enable_system_metrics then
-              ( (fun messages ->
-                  let* system_metrics = Metric.system () in
-                  match system_metrics with
-                  | Some metrics ->
-                      send context
-                        ((metrics |> Metric.to_message_yojson) :: messages)
-                  | None -> send context messages),
-                max_message_batch_size - 1 )
-            else (send context, max_message_batch_size)
+          let* metric_messages =
+            (if !Conf.enable_system_metrics then Metric.system ()
+            else Lwt.return None)
+            >>= fun system ->
+            (if !Conf.enable_process_metrics then Metric.process ()
+            else Lwt.return None)
+            >|= fun process ->
+            let ( +? ) = Util.( +? ) in
+            system +? (process +? []) |> List.map Metric.to_message_yojson
           in
-          let messages = Message_queue.pop_n ~max:max_message_batch_size in
+          let max_message_batch_size = max_message_batch_size - List.length metric_messages in
+          let messages = metric_messages @ Message_queue.pop_n ~max:max_message_batch_size in
           (match messages with
           | [] -> Lwt.return_unit
           | _ ->
               let* () =
-                Log_lwt.debug (fun m ->
+                Log_lwt.err (fun m ->
                     m "Sending messages: %a"
                       (Fmt.list Yojson.Safe.pretty_print)
                       messages)
               in
-              send messages)
+              send context messages)
           >>= dynamic_sleep
     in
     run_forever ()
@@ -95,10 +94,11 @@ end
 let init ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
     ?(max_queue_size = Conf.Defaults.max_queue_size)
     ?(max_wait_time = Conf.Defaults.max_wait_time) ?(send = Sender.send)
-    ?(enable_system_metrics = false) ?(include_cli_args = true)
-    ?(log_level : Logs.level option) context =
+    ?(enable_system_metrics = false) ?(enable_process_metrics = false)
+    ?(include_cli_args = true) ?(log_level : Logs.level option) context =
   Sender.global_sender := Some { max_message_batch_size; context; send };
   Conf.enable_system_metrics := enable_system_metrics;
+  Conf.enable_process_metrics := enable_process_metrics;
   Conf.include_cli_args := include_cli_args;
   Conf.max_queue_size := max_queue_size;
   Conf.max_wait_time := max_wait_time;

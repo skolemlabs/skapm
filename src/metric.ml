@@ -1,5 +1,7 @@
 open Lwt
 
+let ( let+ ) = Lwt.bind
+
 type yojson_num = [ `Float of float | `Int of int | `Intlit of string ]
 type sample = string * yojson_num
 type tag = string * [ `String of string | `Bool of bool | yojson_num ]
@@ -69,13 +71,55 @@ let get_free_memory file =
         Int64.mul !memFree 1024L)
   |> Lwt_result.catch
 
+let get_open_fds () =
+  Util.run_cmd "ls -a /proc/self/fd/ | wc -l"
+  >|= int_of_string |> Lwt_result.catch
+
+let process () =
+  let timestamp = Timestamp.now_ms () in
+  let+ open_fds = get_open_fds () in
+  let gc_samples =
+    let Gc.
+          {
+            minor_words;
+            major_words;
+            promoted_words;
+            minor_collections;
+            major_collections;
+            heap_words;
+            heap_chunks;
+            compactions;
+            _;
+          } =
+      Gc.quick_stat ()
+    in
+    [
+      ("process.gc.minor_words", `Float minor_words);
+      ("process.gc.major_words", `Float major_words);
+      ("process.gc.promoted_words", `Float promoted_words);
+      ("process.gc.minor_collections", `Int minor_collections);
+      ("process.gc.major_collections", `Int major_collections);
+      ("process.gc.heap_words", `Int heap_words);
+      ("process.gc.heap_cunks", `Int heap_chunks);
+      ("process.gc.compactions", `Int compactions);
+    ]
+  in
+  let fd_samples =
+    match open_fds with
+    | Ok open_fds -> [ ("process.files.open", `Int open_fds) ]
+    | Error _ -> []
+  in
+  Lwt.return
+    (match fd_samples @ gc_samples with
+    | [] -> None
+    | samples -> Some (make ~samples ~timestamp ()))
+
 let system () =
-  let ( let* ) = Lwt.bind in
   let timestamp = Timestamp.now_ms () in
   let meminfo = Util.read_file "/proc/meminfo" in
   let proc_stat = Util.read_file "/proc/stat" in
-  let* total_memory = get_total_memory meminfo in
-  let* free_memory = get_free_memory meminfo in
+  let+ total_memory = get_total_memory meminfo in
+  let+ free_memory = get_free_memory meminfo in
   let ram_samples =
     match (total_memory, free_memory) with
     | Ok total_memory, Ok free_memory ->
@@ -87,7 +131,7 @@ let system () =
         ]
     | _ -> []
   in
-  let* cpu_usage = get_cpu_usage proc_stat in
+  let+ cpu_usage = get_cpu_usage proc_stat in
   let cpu_samples =
     match cpu_usage with
     | Ok (Some cpu_usage) -> [ ("system.cpu.total.norm.pct", `Float cpu_usage) ]
