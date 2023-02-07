@@ -27,14 +27,14 @@ end
 module Exception = struct
   type t = {
     message : string;
-    type_ : string; [@key "type"]
+    type_ : string option; [@key "type"]
     stacktrace : Stack_trace.t;
   }
   [@@deriving to_yojson, make]
 
   let of_exn st (exn : exn) : t =
     let stacktrace = Stack_trace.make_stacktrace st in
-    make ~message:(Printexc.to_string exn) ~type_:"exn" ~stacktrace
+    make ~message:(Printexc.to_string exn) ~type_:"exn" ~stacktrace ()
 end
 
 type t = {
@@ -69,9 +69,7 @@ let of_result ?(parent : parent option) ~(pp : 'err Fmt.t)
       let timestamp = Timestamp.now_ms () in
       let parent_id, trace_id = parent_ids parent in
       let msg = Fmt.str "%a" pp e in
-      let exception_ =
-        Exception.make ~message:msg ~type_:"result" ~stacktrace:[]
-      in
+      let exception_ = Exception.make ~message:msg ~stacktrace:[] () in
       Some (make ~id ~timestamp ?trace_id ?parent_id ~exception_ ())
   | Ok _ -> None
 
