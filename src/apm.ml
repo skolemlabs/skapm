@@ -64,29 +64,28 @@ module Sender = struct
       match !global_sender with
       | None -> Lwt_unix.sleep !Conf.max_wait_time
       | Some { max_message_batch_size; context; send } ->
-          let send, max_message_batch_size =
-            if !Conf.enable_system_metrics then
-              ( (fun messages ->
-                  let* system_metrics = Metric.system () in
-                  match system_metrics with
-                  | Some metrics ->
-                      send context
-                        ((metrics |> Metric.to_message_yojson) :: messages)
-                  | None -> send context messages),
-                max_message_batch_size - 1 )
-            else (send context, max_message_batch_size)
+          let* metric_messages =
+            (if !Conf.enable_system_metrics then Metric.system ()
+            else Lwt.return None)
+            >>= fun system ->
+            (if !Conf.enable_process_metrics then Metric.process ()
+            else Lwt.return None)
+            >|= fun process ->
+            let ( +? ) = Util.( +? ) in
+            system +? (process +? []) |> List.map Metric.to_message_yojson
           in
-          let messages = Message_queue.pop_n ~max:max_message_batch_size in
+          let max_message_batch_size = max_message_batch_size - List.length metric_messages in
+          let messages = metric_messages @ Message_queue.pop_n ~max:max_message_batch_size in
           (match messages with
           | [] -> Lwt.return_unit
           | _ ->
               let* () =
-                Log_lwt.debug (fun m ->
+                Log_lwt.err (fun m ->
                     m "Sending messages: %a"
                       (Fmt.list Yojson.Safe.pretty_print)
                       messages)
               in
-              send messages)
+              send context messages)
           >>= dynamic_sleep
     in
     run_forever ()

@@ -9,7 +9,7 @@ let read_file path =
 
 let run_cmd cmd =
   let cmd = Lwt_process.shell cmd in
-  let output = Lwt_process.open_process_in cmd in
+  let output = Lwt_process.open_process_in ~stderr:`Dev_null cmd in
   Lwt_io.read output#stdout
 
 let wrap_call ?(context = Span.Context.empty) ~name ~type_ ~subtype ~action
@@ -25,3 +25,6 @@ let wrap_call ?(context = Span.Context.empty) ~name ~type_ ~subtype ~action
       Error.send error;
       let (_ : Span.result) = Span.finalize_and_send span in
       raise exn
+
+let cons_opt opt l = match opt with Some x -> x :: l | None -> l
+let ( +? ) = cons_opt
