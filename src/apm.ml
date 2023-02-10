@@ -74,8 +74,12 @@ module Sender = struct
             let ( +? ) = Util.( +? ) in
             system +? (process +? []) |> List.map Metric.to_message_yojson
           in
-          let max_message_batch_size = max_message_batch_size - List.length metric_messages in
-          let messages = metric_messages @ Message_queue.pop_n ~max:max_message_batch_size in
+          let max_message_batch_size =
+            max_message_batch_size - List.length metric_messages
+          in
+          let messages =
+            metric_messages @ Message_queue.pop_n ~max:max_message_batch_size
+          in
           (match messages with
           | [] -> Lwt.return_unit
           | _ ->

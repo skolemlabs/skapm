@@ -1,46 +1,26 @@
-type span_count = { started : int } [@@deriving to_yojson]
+include Types.Transaction
 
-let no_span = { started = 0 }
-
-type context = {
-  request : Http.request option;
-  response : Http.response option;
-  tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
-}
-[@@deriving to_yojson, make]
-
-type result = {
-  id : string;
-  name : string;
-  timestamp : int;
-  trace_id : string;
-  parent_id : string option;
-  duration : float;
-  type_ : string; [@key "type"]
-  span_count : span_count;
-  context : context;
-}
-[@@deriving to_yojson, make]
-
-let to_message_yojson result =
-  `Assoc [ ("transaction", result_to_yojson result) ]
-
-type t = {
-  finalize : ?response:Http.response -> unit -> result;
-  incr_spans : unit -> unit;
-  id : string;
-  trace_id : string;
-}
-
-let finalize ?response t = t.finalize ?response ()
+let finalize ?response transaction =
+  Option.iter Gc.delete_alarm transaction.alarm;
+  let finished_time = Mtime_clock.count transaction.counter in
+  let duration = Mtime.Span.to_ms finished_time in
+  let span_count : span_count = { started = !(transaction.num_spans) } in
+  let context =
+    make_context ?request:transaction.request ?response ?tags:transaction.tags
+      ()
+  in
+  make_result ~id:transaction.id ~name:transaction.name
+    ~timestamp:transaction.timestamp ~trace_id:transaction.trace_id
+    ?parent_id:transaction.parent_id ~duration ~type_:transaction.type_
+    ~span_count ~context ()
 
 let finalize_and_send ?response t =
-  let result = t.finalize ?response () in
+  let result = finalize ?response t in
   Message_queue.push (to_message_yojson result);
   result
 
 let make_transaction ?(trace : Trace.t option) ?(tags : Tag.t list option)
-    ?request ~name ~type_ () =
+    ?(gc = false) ?request ~name ~type_ () =
   let id = Id.make () in
   let parent_id, trace_id =
     match trace with
@@ -48,17 +28,40 @@ let make_transaction ?(trace : Trace.t option) ?(tags : Tag.t list option)
     | None -> (None, Id.make ())
   in
   let timestamp = Timestamp.now_ms () in
-  let now = Mtime_clock.counter () in
-  let num_spans = ref 0 in
-  let incr_spans () = incr num_spans in
-  let finalize ?response () =
-    let finished_time = Mtime_clock.count now in
-    let duration = Mtime.Span.to_ms finished_time in
-    let span_count : span_count = { started = !num_spans } in
-    let context = make_context ?request ?response ?tags () in
-    make_result ~id ~name ~timestamp ~trace_id ?parent_id ~duration ~type_
-      ~span_count ~context ()
-  in
+  let counter = Mtime_clock.counter () in
   let new_trace = { Trace.trace_id; parent_id; transaction_id = Some id } in
-  let t : t = { finalize; id; incr_spans; trace_id } in
+  let num_spans = ref 0 in
+  let alarm =
+    if gc then
+      Option.some
+      @@ Gc.create_alarm (fun () ->
+             let span_id = Id.make () in
+             let timestamp = Timestamp.now_ms () in
+             incr num_spans;
+             (* We alarms only go off at the end of a collection,
+                meaning we can only create a result which shows up as a tick in the waterfall graph *)
+             let span =
+               Types.Span.(
+                 make_result ~id:span_id ~name:"Gc.alarm" ~timestamp ~trace_id
+                   ~parent_id:id ~duration:0. ~type_:"Gc" ~context:Context.empty
+                   ())
+             in
+             Message_queue.push (Types.Span.to_message_yojson span))
+    else None
+  in
+  let t : t =
+    {
+      num_spans;
+      id;
+      trace_id;
+      counter;
+      timestamp;
+      request;
+      tags;
+      type_;
+      name;
+      parent_id;
+      alarm;
+    }
+  in
   (new_trace, t)

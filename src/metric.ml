@@ -1,28 +1,7 @@
+include Types.Metric
 open Lwt
 
 let ( let+ ) = Lwt.bind
-
-type yojson_num = [ `Float of float | `Int of int | `Intlit of string ]
-type sample = string * yojson_num
-type tag = string * [ `String of string | `Bool of bool | yojson_num ]
-
-let sample_list_to_yojson samples =
-  `Assoc
-    (samples
-    |> List.map (fun (prop, value) ->
-           (prop, `Assoc [ ("value", (value :> Yojson.Safe.t)) ])))
-
-let tag_list_to_yojson tags : Yojson.Safe.t =
-  `Assoc (tags :> (string * Yojson.Safe.t) list)
-
-type t = {
-  samples : sample list; [@to_yojson sample_list_to_yojson]
-  tags : (tag list[@to_yojson tag_list_to_yojson]) option;
-  timestamp : int;
-}
-[@@deriving to_yojson, make]
-
-let to_message_yojson t = `Assoc [ ("metricset", to_yojson t) ]
 let send t = Message_queue.push (to_message_yojson t)
 let prev_idle_time = ref None
 let prev_total_time = ref None
