@@ -1,17 +1,29 @@
 open Lwt.Infix
 
 let allocate ~wait n () =
+  let _, transaction =
+    Skapm.Transaction.make_transaction ~name:"GC run" ~type_:"example" ~gc:true
+      ()
+  in
   (* allocate an array of size [n] *)
   Lwt_io.printf "allocating an array of size %d\n" n >>= fun () ->
   let arr = Array.make n () in
   Lwt_io.printf "sleeping for %fs\n" wait >>= fun () ->
   (* sleep for [wait] *)
-  Lwt_unix.sleep wait
+  Lwt_unix.sleep (wait -. 1.)
   >|= (fun () ->
         (* ensure the GC doesn't prematurely collect the array *)
         let (_ : unit array) = Sys.opaque_identity arr in
         ())
   >|= Gc.full_major (* force a major heap collection *)
+  >>= fun () ->
+  Lwt_unix.sleep 0.5 >|= Gc.full_major (* force a major heap collection *)
+  >>= fun () ->
+  Lwt_unix.sleep 0.5 >|= fun () ->
+  let (_ : Skapm.Transaction.result) =
+    Skapm.Transaction.finalize_and_send transaction
+  in
+  ()
 
 let () =
   let log_src = Logs.Src.create "apm" in
@@ -24,9 +36,9 @@ let () =
   in
   Logs.set_reporter @@ Logs_fmt.reporter ();
   Skapm.Apm.init ~enable_process_metrics:true context;
-  let rec f = (fun () ->
+  let rec f () =
     let n = Random.int 10_000 in
-    let wait = (Random.int 50 |> Float.of_int) /. 5. in
+    let wait = 1. +. ((Random.int 50 |> Float.of_int) /. 5.) in
     allocate ~wait n () >>= f
-  ) in
+  in
   Lwt_main.run @@ f ()
