@@ -13,8 +13,9 @@ let rec make_room num_dropped =
         m "Forced to drop %d message(s) to make room in queue" num_dropped)
 
 let push message =
-  make_room 0;
-  Queue.push message q
+  if !Conf.initialized then (
+    make_room 0;
+    Queue.push message q)
 
 let pop_n ~max =
   let rec aux messages n =

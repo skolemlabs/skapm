@@ -107,6 +107,7 @@ let init ?(max_message_batch_size = Conf.Defaults.max_message_batch_size)
   Conf.max_queue_size := max_queue_size;
   Conf.max_wait_time := max_wait_time;
   Conf.sleep_ratio := 0.9 *. max_wait_time /. float max_queue_size;
+  Conf.initialized := true;
   Logger.set_level log_level;
   Lwt.async Sender.run_forever
 
