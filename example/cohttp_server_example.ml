@@ -65,7 +65,8 @@ let () =
   let secret_token = Sys.getenv "APM_SECRET_TOKEN" in
   let url = Sys.getenv "APM_URL" |> Uri.of_string in
   let context =
-    Skapm.Context.make ~secret_token ~service_name ~apm_server:url ()
+    Skapm.Context.make ~secret_token ~service_name ~apm_server:url
+      ~environment:"local_env" ()
   in
   Logs.set_reporter @@ Logs_fmt.reporter ();
   Skapm.Apm.init ~enable_system_metrics:true ~log_level:Logs.Debug context;
