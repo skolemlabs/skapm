@@ -1,26 +1,21 @@
 include Types.Transaction
 
-let finalize ?response transaction =
+let finalize ?(context = Context.empty) transaction =
   Option.iter Gc.delete_alarm transaction.alarm;
   let finished_time = Mtime_clock.count transaction.counter in
   let duration = Mtime.Span.to_ms finished_time in
   let span_count : span_count = { started = !(transaction.num_spans) } in
-  let context =
-    make_context ?request:transaction.request ?response ?tags:transaction.tags
-      ()
-  in
   make_result ~id:transaction.id ~name:transaction.name
     ~timestamp:transaction.timestamp ~trace_id:transaction.trace_id
     ?parent_id:transaction.parent_id ~duration ~type_:transaction.type_
     ~span_count ~context ()
 
-let finalize_and_send ?response t =
-  let result = finalize ?response t in
+let finalize_and_send ?context t =
+  let result = finalize ?context t in
   Message_queue.push (to_message_yojson result);
   result
 
-let make_transaction ?(trace : Trace.t option) ?(tags : Tag.t list option)
-    ?(gc = false) ?request ~name ~type_ () =
+let make_transaction ?(trace : Trace.t option) ?(gc = false) ~name ~type_ () =
   let id = Id.make () in
   let parent_id, trace_id =
     match trace with
@@ -56,8 +51,6 @@ let make_transaction ?(trace : Trace.t option) ?(tags : Tag.t list option)
       trace_id;
       counter;
       timestamp;
-      request;
-      tags;
       type_;
       name;
       parent_id;

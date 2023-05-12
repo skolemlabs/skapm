@@ -12,12 +12,11 @@ let run_cmd cmd =
   let output = Lwt_process.open_process_in ~stderr:`Dev_null cmd in
   Lwt_io.read output#stdout
 
-let wrap_call ?(context = Span.Context.empty) ~name ~type_ ~subtype ~action
-    ~parent (f : unit -> 'a) =
-  let span = Span.make_span ~name ~type_ ~subtype ~action ~parent ~context () in
+let wrap_call ?context ~name ~type_ ~subtype ~action ~parent (f : unit -> 'a) =
+  let span = Span.make_span ~name ~type_ ~subtype ~action ~parent () in
   match f () with
   | v ->
-      let (_ : Span.result) = Span.finalize_and_send span in
+      let (_ : Span.result) = Span.finalize_and_send ?context span in
       v
   | exception exn ->
       let st = Printexc.get_raw_backtrace () in

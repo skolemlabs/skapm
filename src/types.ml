@@ -1,12 +1,58 @@
+open struct
+  let uri_to_yojson uri =
+    let str = Uri.to_string uri in
+    print_endline str;
+    `String str
+end
+
+module Http = struct
+  type headers = (string * string) list
+  type meth = Cohttp.Code.meth
+  type status_code = Cohttp.Code.status_code
+
+  let meth_to_yojson m = `String (Cohttp.Code.string_of_method m)
+  let status_code_to_yojson sc = `Int (Cohttp.Code.code_of_status sc)
+
+  let headers_to_yojson (headers : headers) =
+    (`Assoc (List.map (fun (k, v) -> (k, `String v)) headers) :> Yojson.Safe.t)
+
+  type url = {
+    protocol : string option;
+    full : string;
+    hostname : string option;
+    port : int option;
+    pathname : string;
+  }
+  [@@deriving to_yojson, make]
+end
+
 module Transaction = struct
   type span_count = { started : int } [@@deriving to_yojson]
 
-  type context = {
-    request : Http.request option;
-    response : Http.response option;
-    tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
-  }
-  [@@deriving to_yojson, make]
+  module Context = struct
+    type request = {
+      meth : Http.meth; [@key "method"]
+      url : Http.url option;
+      http_version : string option;
+      headers : Http.headers option;
+    }
+    [@@deriving to_yojson, make]
+
+    type response = {
+      status_code : Http.status_code option;
+      transfer_size : int option;
+      headers : Http.headers option;
+    }
+
+    and t = {
+      request : request option;
+      response : response option;
+      tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
+    }
+    [@@deriving to_yojson, make]
+
+    let empty = { request = None; response = None; tags = None }
+  end
 
   type t = {
     num_spans : int ref;
@@ -14,8 +60,6 @@ module Transaction = struct
     trace_id : string;
     counter : Mtime_clock.counter;
     timestamp : int;
-    request : Http.request option;
-    tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
     type_ : string;
     name : string;
     parent_id : string option;
@@ -34,7 +78,7 @@ module Transaction = struct
     duration : float;
     type_ : string; [@key "type"]
     span_count : span_count;
-    context : context;
+    context : Context.t;
   }
   [@@deriving to_yojson, make]
 
@@ -54,13 +98,26 @@ module Span = struct
     }
     [@@deriving to_yojson, make]
 
-    type t = {
-      tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
-      db : db option;
+    type http = {
+      meth : Http.meth option; [@key "method"]
+      response : response option;
+      url : (Uri.t[@to_yojson uri_to_yojson]) option;
+    }
+
+    and response = {
+      headers : Http.headers; [@default []]
+      status_code : Http.status_code option; [@key "statusCode"]
     }
     [@@deriving to_yojson, make]
 
-    let empty = { tags = None; db = None }
+    type t = {
+      tags : (Tag.t list[@to_yojson Tag.list_to_yojson]) option;
+      db : db option;
+      http : http option;
+    }
+    [@@deriving to_yojson, make]
+
+    let empty = { tags = None; db = None; http = None }
   end
 
   type result = {
@@ -89,7 +146,6 @@ module Span = struct
     type_ : string;
     subtype : string option;
     action : string option;
-    context : Context.t;
   }
 end
 
