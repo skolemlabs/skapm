@@ -31,8 +31,8 @@ let current_runtime =
   let version = Sys.ocaml_version in
   make_runtime ~name ~version
 
-let make_service name = make_service ~name ~runtime:current_runtime ~agent
+let make_service ?environment name =
+  make_service ?environment ~name ~runtime:current_runtime ~agent ()
 
-let make ~name =
-  let service = make_service name in
+let make_metadata ~service =
   make ~process:(current_process ()) ~system:current_system ~service

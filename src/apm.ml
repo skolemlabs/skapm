@@ -19,7 +19,12 @@ module Sender = struct
 
   let make_body (context : Context.t) (events : Yojson.Safe.t list) =
     let metadata =
-      Message.Metadata (Metadata.make ~name:context.service_name)
+      Message.Metadata
+        Metadata.(
+          make_metadata
+            ~service:
+              (make_service ?environment:context.environment
+                 context.service_name))
     in
     let jsons =
       List.map Yojson.Safe.to_string (Message.to_yojson metadata :: events)
