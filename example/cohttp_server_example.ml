@@ -21,16 +21,38 @@ module Handlers = struct
             Skapm.Span.Context.make ~tags:[ ("index", `Int i) ] ()
           in
           let span =
-            Skapm.Span.make_span ~context ~parent:(`Transaction transaction)
+            Skapm.Span.make_span ~parent:(`Transaction transaction)
               ~name:("Span" ^ string_of_int i)
               ~type_:"Type" ~subtype:"Subtype" ~action:"Action" ()
           in
           Lwt_unix.sleep (length /. float sections) >|= fun () ->
-          let (_ : Skapm.Span.result) = Skapm.Span.finalize_and_send span in
+          let (_ : Skapm.Span.result) =
+            Skapm.Span.finalize_and_send ~context span
+          in
           ())
     in
     list |> Lwt_list.map_s (fun c -> c ()) >|= fun _ ->
     (`OK, Printf.sprintf "Collected %d spans over %fs" sections length)
+
+  let ip _ transaction =
+    let span =
+      Skapm.Span.make_span ~parent:(`Transaction transaction) ~name:"get IP"
+        ~type_:"GET" ()
+    in
+    Client.get (Uri.of_string "http://httpbin.org/ip") >>= fun (resp, body) ->
+    let context =
+      Skapm.Span.Context.(
+        let response =
+          make_response
+            ~headers:(resp |> Response.headers |> Cohttp.Header.to_list)
+            ~status_code:(resp |> Response.status) ()
+        in
+        let http = make_http ~meth:`GET ~response () in
+        make ~http ())
+    in
+    Cohttp_lwt.Body.to_string body >|= fun body ->
+    let (_ : Skapm.Span.result) = Skapm.Span.finalize_and_send ~context span in
+    (`OK, body)
 
   let not_found _ = Lwt.return (`Not_found, "Not found")
 end
@@ -44,11 +66,23 @@ let route req =
   (match path with
   | "/" -> Handlers.root req
   | "/sleep" -> Handlers.sleep req transaction
+  | "/ip" -> Handlers.ip req transaction
   | _ -> Handlers.not_found req)
   >|= fun resp ->
   let status, body = resp in
+  let context =
+    Skapm.Transaction.Context.(
+      let request =
+        make_request ~meth:(Request.meth req)
+          ~headers:(Request.headers req |> Cohttp.Header.to_list)
+          ~http_version:(Request.version req |> Cohttp.Code.string_of_version)
+          ()
+      in
+      let response = make_response ~status_code:status () in
+      make ~response ~request ())
+  in
   let (_ : Skapm.Transaction.result) =
-    Skapm.Transaction.finalize_and_send transaction
+    Skapm.Transaction.finalize_and_send ~context transaction
   in
   (status, body)
 
