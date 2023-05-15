@@ -219,7 +219,12 @@ module Metadata = struct
   type runtime = { name : string; version : string }
   [@@deriving to_yojson, make]
 
-  type service = { name : string; runtime : runtime; agent : agent }
+  type service = {
+    name : string;
+    runtime : runtime;
+    agent : agent;
+    environment : string option;
+  }
   [@@deriving to_yojson, make]
 
   type t = { process : process; system : system; service : service }

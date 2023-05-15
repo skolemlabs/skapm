@@ -14,8 +14,3 @@ let to_yojson (event : t) : Yojson.Safe.t =
   | Span s -> Span.to_message_yojson s
 
 let to_string (event : t) = Yojson.Safe.to_string (to_yojson event)
-
-let make_body (context : Context.t) (events : t list) =
-  let metadata = Metadata (Metadata.make ~name:context.service_name) in
-  let jsons = List.map to_string (metadata :: events) in
-  String.concat "\n" jsons
