@@ -1,7 +1,6 @@
 open struct
   let uri_to_yojson uri =
     let str = Uri.to_string uri in
-    print_endline str;
     `String str
 
   type 'a field = string * 'a constraint 'a = [< Yojson.Safe.t ]
