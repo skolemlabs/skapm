@@ -22,6 +22,7 @@
  (depends
   (ocaml (>= 4.08.0))
   (cohttp-lwt-unix (>= 2.5.4))
+  (lwt (< 5.7.0))
   (dune (>= 2.5.0))
   (dune-build-info (>= 2.5.0))
   (ppx_deriving (>= 4.5))
