@@ -45,14 +45,18 @@ module Sender = struct
 
   let send context messages =
     let ( let* ) = Lwt.bind in
-    let* response, body = post context messages in
-    match response.status with
-    | #Cohttp.Code.success_status -> Lwt.return_unit
-    | _ ->
-        Log_lwt.warn (fun m ->
-            m "APM server response %d: %s"
-              (Cohttp.Code.code_of_status response.status)
-              body)
+    Lwt.catch
+      (fun () ->
+        let* response, body = post context messages in
+        match response.status with
+        | #Cohttp.Code.success_status -> Lwt.return_unit
+        | _ ->
+            Log_lwt.warn (fun m ->
+                m "APM server response %d: %s"
+                  (Cohttp.Code.code_of_status response.status)
+                  body))
+      (fun exn ->
+        Log_lwt.warn (fun f -> f "Error sending APM data: %a" Fmt.exn exn))
 
   let dynamic_sleep () =
     let queue_size = Message_queue.size () in
