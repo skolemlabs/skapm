@@ -27,3 +27,9 @@ let wrap_call ?context ~name ~type_ ~subtype ~action ~parent (f : unit -> 'a) =
 
 let cons_opt opt l = match opt with Some x -> x :: l | None -> l
 let ( +? ) = cons_opt
+
+let pp_str_ellipsize ?(max_len = 256) () fmt str =
+  if String.length str > max_len then (
+    Format.pp_print_string fmt (String.sub str 0 (max_len - 1));
+    Format.pp_print_string fmt "\u{2026}")
+  else Format.pp_print_string fmt str
