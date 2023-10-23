@@ -52,9 +52,9 @@ module Sender = struct
         | #Cohttp.Code.success_status -> Lwt.return_unit
         | _ ->
             Log_lwt.warn (fun m ->
-                m "APM server response %d: %s"
+                m "APM server response %d: %a"
                   (Cohttp.Code.code_of_status response.status)
-                  body))
+                  (Util.pp_str_ellipsize ()) body))
       (fun exn ->
         Log_lwt.warn (fun f -> f "Error sending APM data: %a" Fmt.exn exn))
 
