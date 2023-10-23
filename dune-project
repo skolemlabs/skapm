@@ -4,9 +4,9 @@
 
 (license Apache-2.0)
 (maintainers
- "Zach Baylin <zach@skolem.tech>")
+ "Zach Baylin <zach.baylin@skolem.com>")
 (authors
- "Zach Baylin <zach@skolem.tech>"
+ "Zach Baylin <zach.baylin@skolem.com>"
  "Adam Ringwood <adam.ringwood@elastic.co>"
  "Hezekiah M. Carty <hezekiah.carty@elastic.co>")
 
@@ -14,7 +14,7 @@
 
 (generate_opam_files true)
 
-(version 1.6.3)
+(version 1.6.4)
 
 (package
  (name skapm)
