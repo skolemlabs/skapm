@@ -51,8 +51,11 @@ let get_free_memory file =
   |> Lwt_result.catch
 
 let get_open_fds () =
-  Util.run_cmd "ls -a /proc/self/fd/ | wc -l"
-  >|= int_of_string |> Lwt_result.catch
+  Lwt_result.Infix.(
+    Util.run_cmd "ls -a /proc/self/fd/ | wc -l"
+    |> Lwt_result.catch >|= String.trim
+    >>= fun i ->
+    try Lwt.return_ok (int_of_string i) with exn -> Lwt.return_error exn)
 
 let process () =
   let timestamp = Timestamp.now_ms () in
