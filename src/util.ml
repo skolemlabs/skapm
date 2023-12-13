@@ -10,7 +10,9 @@ let read_file path =
 let run_cmd cmd =
   let cmd = Lwt_process.shell cmd in
   let output = Lwt_process.open_process_in ~stderr:`Dev_null cmd in
-  Lwt_io.read output#stdout
+  let stdout = Lwt_io.read output#stdout in
+  let+ (_ : Unix.process_status) = output#close in
+  stdout
 
 let wrap_call ?context ~name ~type_ ~subtype ~action ~parent (f : unit -> 'a) =
   let span = Span.make_span ~name ~type_ ~subtype ~action ~parent () in
